@@ -1,0 +1,22 @@
+{
+  "name": "光栅小卡机",
+  "rec_dir": "rec",
+  "icon": "icon.png",
+  "out": "promo.mp4",
+  "footer": "小红书搜「光栅小卡机」",
+  "end_line1": "小红书搜一搜，就能玩",
+  "end_line2": "左右歪换图 · 上下歪虚焦 · 存动图",
+  "end_dur": 3.2,
+  "mark_offsets": { "pick": 0.8, "make": 0.45 },
+  "segments": [
+    { "from": "intro", "to": "pick", "dur": 3.0, "caption": "做了个会变的光栅小卡", "tag": "小红书小工具" },
+    { "from": "pick", "to": "make", "dur": 2.4, "caption": "选几张喜欢的照片", "tag": "STEP 1" },
+    { "from": "make", "to": "lr", "dur": 1.3, "caption": "一键压成光栅卡", "tag": "STEP 2" },
+    { "from": "lr", "to": "ud", "dur": 4.2, "caption": "左右歪一歪 → 换一张", "tag": "光栅换图" },
+    { "from": "ud", "to": "skins", "dur": 3.4, "caption": "上下歪 → 虚焦再对焦", "tag": "景深" },
+    { "from": "skins", "to": "gif", "dur": 4.6, "caption": "6 种卡面随手换", "tag": "镭射 · 赛博 · 金属 …" },
+    { "from": "gif", "to": "follow", "dur": 2.4, "caption": "存成动图", "tag": "头像 / 朋友圈" },
+    { "from": "follow", "to": "note", "dur": 2.2, "caption": "喜欢就关注一下作者", "tag": "下一个小工具见" },
+    { "from": "note", "to": "end", "dur": 2.2, "caption": "一键发笔记", "tag": "晒出你的第一张" }
+  ]
+}
