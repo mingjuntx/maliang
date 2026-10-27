@@ -83,6 +83,7 @@ scripts/
   scenario.example.js    录屏脚本示例
   compose_promo.py       宣传片合成（字幕、配乐、音效、口播、结尾卡）
   check_xhs_zip.py       小红书小工具 zip 自检（文件类型、大小、禁用写法、兼容性）
+  immersive.css / .js    沉浸式布局组件：全屏舞台、主按钮、浮动小圆钮、底部抽屉
   promo.example.json     宣传片配置示例
 ```
 

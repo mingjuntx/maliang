@@ -1,0 +1,62 @@
+/* 马良 · 沉浸式布局组件（复制进工具的 css 末尾即可）
+ * 结构：section.view.immersive > .stage.full（铺满） + .hud-top + .hud-bottom（.fab ×n + .fire 主按钮） + .drawer ×n
+ * 配合 immersive.js：Immersive.init({ root, stage, drawers })，按钮里调 Immersive.toggle('xxxDrawer')
+ * 颜色变量：--accent1 / --accent2 是主按钮渐变色，按工具改
+ */
+:root { --accent1: #ffd27a; --accent2: #ff8a1a; --accent3: #b0400a; }
+.view.immersive { padding-top: 0; background: #000; }
+.stage.full { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.scene-full { display: block; width: 100%; height: 100%; }
+.glass { background: rgba(0, 0, 0, 0.28); }
+@supports ((-webkit-backdrop-filter: blur(8px)) or (backdrop-filter: blur(8px))) {
+  .glass, .fab, .drawer { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+}
+.hud-top { position: absolute; left: 0; right: 0; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 6px 10px 0; padding-top: calc(6px + var(--sat, 0px)); -webkit-transition: opacity 0.35s; transition: opacity 0.35s; }
+.hud-title { font-size: 14px; font-weight: 700; color: rgba(255, 240, 220, 0.7); letter-spacing: 2px; }
+.hud-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 14px 18px; padding-bottom: calc(18px + var(--sab, 0px)); -webkit-transition: opacity 0.35s; transition: opacity 0.35s; }
+.hud-side { display: flex; flex-direction: column; align-items: center; }
+.fab { width: 58px; height: 58px; margin-top: 12px; border-radius: 29px; background: rgba(20, 22, 40, 0.42); border: 1px solid rgba(255, 255, 255, 0.14); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.fab i { font-style: normal; font-size: 20px; line-height: 22px; }
+.fab span { font-size: 10px; color: rgba(255, 240, 220, 0.8); margin-top: 1px; }
+.fire { position: relative; width: 96px; height: 96px; border-radius: 48px; background: radial-gradient(circle at 50% 40%, var(--accent1), var(--accent2) 70%, var(--accent3)); box-shadow: 0 0 34px rgba(255, 140, 60, 0.65), 0 10px 26px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; }
+.fire i { font-style: normal; font-size: 30px; line-height: 32px; }
+.fire span { font-size: 13px; font-weight: 800; letter-spacing: 1px; }
+.fire.burning { background: radial-gradient(circle at 50% 40%, #4a3020, #2a1810 70%, #140a06); box-shadow: 0 0 22px rgba(255, 140, 60, 0.35); }
+.fire:disabled { opacity: 1; }
+.fuel { position: absolute; left: -6px; top: -6px; width: 108px; height: 108px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg); pointer-events: none; }
+.fuel-bg { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 4; }
+.fuel-fg { fill: none; stroke: #ffd57a; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 289; -webkit-transition: stroke-dashoffset 0.2s linear; transition: stroke-dashoffset 0.2s linear; }
+/* 在舞台上拖动时界面淡出 */
+.immersive.dim .hud-top, .immersive.dim .hud-bottom, .immersive.dim .stage-hint { opacity: 0.12; }
+.stage-hint { position: absolute; left: 0; right: 0; bottom: 150px; bottom: calc(150px + var(--sab, 0px)); z-index: 4; text-align: center; font-size: 13px; color: rgba(255, 240, 220, 0.75); text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8); pointer-events: none; -webkit-transition: opacity 0.6s; transition: opacity 0.6s; }
+.stage-hint.gone { opacity: 0; }
+/* 抽屉：从底部滑出，上半屏的画面一直看得见 */
+.drawer { position: absolute; left: 0; right: 0; bottom: 0; z-index: 8; max-height: 48%; padding: 8px 12px 16px; padding-bottom: calc(16px + var(--sab, 0px)); background: rgba(12, 14, 28, 0.82); border-top-left-radius: 22px; border-top-right-radius: 22px; border-top: 1px solid rgba(255, 255, 255, 0.1); -webkit-transform: translateY(105%); transform: translateY(105%); -webkit-transition: -webkit-transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1); transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.drawer.open { -webkit-transform: translateY(0); transform: translateY(0); }
+.drawer-handle { width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); margin: 2px auto 10px; }
+.drawer-title { text-align: center; font-size: 15px; font-weight: 800; color: #fff3e0; margin-bottom: 12px; }
+.tabs { display: flex; justify-content: center; margin-bottom: 10px; }
+.tab { padding: 6px 16px; margin: 0 4px; border-radius: 16px; font-size: 14px; color: rgba(255, 240, 220, 0.6); }
+.tab.on { background: rgba(255, 255, 255, 0.12); color: #fff; font-weight: 800; }
+.tiles { display: flex; flex-wrap: wrap; justify-content: flex-start; }
+.tile { position: relative; width: 23%; margin: 0 1% 10px; padding: 8px 0 6px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1.5px solid transparent; text-align: center; }
+.tile.on { border-color: #ffd57a; background: rgba(255, 213, 122, 0.12); }
+.tile .sw-big { display: block; width: 38px; height: 38px; margin: 0 auto 5px; border-radius: 19px; }
+.tile .sw-stick { display: block; width: 12px; height: 38px; margin: 0 auto 5px; border-radius: 6px; }
+.tile span { display: block; font-size: 11px; color: rgba(255, 240, 220, 0.85); white-space: nowrap; overflow: hidden; }
+.tile .lock { position: absolute; right: 4px; top: 3px; font-size: 11px; }
+.big-actions { display: flex; justify-content: space-around; padding: 4px 0 6px; }
+.big-act { width: 30%; padding: 14px 0 10px; border-radius: 16px; background: rgba(255, 255, 255, 0.07); display: flex; flex-direction: column; align-items: center; }
+.big-act i { font-style: normal; font-size: 28px; line-height: 34px; }
+.big-act span { margin-top: 4px; font-size: 12px; color: #fff3e0; }
+.big-act.hot { background: linear-gradient(135deg, rgba(255, 198, 90, 0.35), rgba(255, 122, 58, 0.35)); }
+.drawer .row-acts { display: flex; justify-content: center; flex-wrap: wrap; padding-top: 4px; }
+.drawer .row-acts .chip { margin: 0 5px 6px; }
+
+.tile .em { display: block; font-style: normal; font-size: 26px; line-height: 38px; height: 38px; margin-bottom: 5px; }
+/* 收起的抽屉彻底隐藏（页面被输入框顶起滚动时也不会露出来） */
+.drawer { visibility: hidden; -webkit-transition: -webkit-transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), visibility 0s 0.32s; transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), visibility 0s 0.32s; }
+.drawer.open { visibility: visible; -webkit-transition-delay: 0s; transition-delay: 0s; }
+/* 收起的抽屉彻底隐藏（页面被输入框顶起滚动时也不会露出来） */
+.drawer { visibility: hidden; -webkit-transition: -webkit-transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), visibility 0s 0.32s; transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), visibility 0s 0.32s; }
+.drawer.open { visibility: visible; -webkit-transition-delay: 0s; transition-delay: 0s; }
