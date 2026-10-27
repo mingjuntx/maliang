@@ -30,15 +30,20 @@
 
 ## 作品
 
-| 3D封面图 | 开香槟啦 | 光栅小卡机 |
+| 电子烟花棒 | 3D封面图 | 开香槟啦 |
 |---|---|---|
-| ![](assets/showcase-3d-cover.jpg) | ![](assets/showcase-champagne.jpg) | ![](assets/showcase-lenticular-card.jpg) |
-| AI 抠出主体，冲出小红书笔记卡片 | 摇一摇手机，开瓶喷射 | 几张照片压成光栅卡：左右歪换图，上下歪虚焦 |
+| ![](assets/showcase-sparkle.jpg) | ![](assets/showcase-3d-cover.jpg) | ![](assets/showcase-champagne.jpg) |
+| 按住点火，叫上搭子传火，解锁爱心 / 流星 / 紫电特效 | AI 抠出主体，冲出小红书笔记卡片 | 摇一摇手机，开瓶喷射 |
 
-| 南瓜灯雕刻机 | 衣橱美术馆 | 邮票压花器 |
+| 南瓜灯雕刻机 | 光栅小卡机 | 衣橱美术馆 |
 |---|---|---|
-| ![](assets/showcase-pumpkin.jpg) | ![](assets/showcase-wardrobe-museum.jpg) | ![](assets/showcase-stamp-punch.jpg) |
-| 手指刻南瓜，点上蜡烛就亮 | 用虚拟衣服摆出世界名画 | 照片一按，压成一张带齿孔的邮票 |
+| ![](assets/showcase-pumpkin.jpg) | ![](assets/showcase-lenticular-card.jpg) | ![](assets/showcase-wardrobe-museum.jpg) |
+| 手指刻南瓜，点上蜡烛就亮 | 几张照片压成光栅卡：左右歪换图，上下歪虚焦 | 用虚拟衣服摆出世界名画 |
+
+| 邮票压花器 |
+|---|
+| ![](assets/showcase-stamp-punch.jpg) |
+| 照片一按，压成一张带齿孔的邮票 |
 
 ## 产出
 1. **小工具**：支持三个平台：
@@ -111,6 +116,8 @@ scripts/
 
 ## 版本
 见 [CHANGELOG.md](CHANGELOG.md)。
+
+发新版本：在 CHANGELOG.md 顶部写好 `## x.y.z（日期）` 一段，把根目录 `VERSION` 改成 `x.y.z`，推到 main。GitHub Actions 会自动打 tag、打包 zip、建 Release。
 
 ## 许可
 [MIT](LICENSE) © mingjuntx

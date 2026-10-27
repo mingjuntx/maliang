@@ -1,0 +1,56 @@
+# 自动发布：改了根目录的 VERSION 并推到 main，就自动打 tag、打包 zip、建 Release。
+# 说明取自 CHANGELOG.md 里对应版本的那一段。也可以在 Actions 页面手动运行。
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 读取版本号
+        id: v
+        run: echo "v=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: 已经发布过就跳过
+        id: chk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.v.outputs.v }}" > /dev/null 2>&1; then
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            echo "v${{ steps.v.outputs.v }} 已经存在，跳过"
+          fi
+
+      - name: 打包 zip 和发布说明
+        if: steps.chk.outputs.skip != '1'
+        run: |
+          V="${{ steps.v.outputs.v }}"
+          mkdir -p dist
+          git archive --format=zip --prefix=maliang/ -o "dist/maliang-$V.zip" HEAD
+          python3 - "$V" <<'PY'
+          import re, sys
+          v = sys.argv[1]
+          text = open('CHANGELOG.md', encoding='utf-8').read()
+          m = re.search(r'^## ' + re.escape(v) + r'\b.*?$(.*?)(?=^## |\Z)', text, re.M | re.S)
+          body = m.group(1).strip() if m else '见 CHANGELOG.md'
+          body += '\n\n**安装**\n- Claude Code：`git clone https://github.com/mingjuntx/maliang.git ~/.claude/skills/maliang`\n- Claude 网页版 / 桌面版：下载下面的 zip，在设置的 Skills 里上传。\n'
+          open('notes.md', 'w', encoding='utf-8').write(body)
+          PY
+
+      - name: 建 Release
+        if: steps.chk.outputs.skip != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.v.outputs.v }}"
+          gh release create "v$V" "dist/maliang-$V.zip" --title "马良 skill $V" --notes-file notes.md --target "${{ github.sha }}"
