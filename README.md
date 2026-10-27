@@ -77,6 +77,7 @@ scripts/
   harness.js             自测截图 / CDP 高清录屏
   scenario.example.js    录屏脚本示例
   compose_promo.py       宣传片合成（字幕、配乐、音效、口播、结尾卡）
+  check_xhs_zip.py       小红书小工具 zip 自检（文件类型、大小、禁用写法、兼容性）
   promo.example.json     宣传片配置示例
 ```
 
@@ -91,7 +92,7 @@ scripts/
 **依赖**
 - 自测和录屏：Node.js、Playwright（Chromium）。
 - 宣传片：Python 3、numpy、Pillow、ffmpeg，以及中文字体（默认 Noto Sans CJK）。
-- 做小红书小工具时，还需要官方的 `minitool-zip-builder` skill（在小红书创服平台下载）。
+- 小红书小工具的打包自检用自带的 `scripts/check_xhs_zip.py`，不需要额外安装。上传前建议再用官方校验跑一遍：在创服平台上传页复制「第一步」的改写口令发给 AI 即可（可选）。
 
 ## 用法
 直接把视频发给智能体：

@@ -1,13 +1,24 @@
 # 小红书小工具（H5 离线 zip）
 
-> 先加载官方 `minitool-zip-builder` skill（在创服平台下载）。官方文档：https://miniapp-sandbox.xiaohongshu.com/minitool/doc
+> 官方文档：https://miniapp-sandbox.xiaohongshu.com/minitool/doc
 > 本文是实战中整理的要点，以官方最新文档为准。
+
+## 打包与校验：不要卡在这一步
+- 马良自带自检脚本，**不依赖官方 skill**，做完直接跑：
+  ```
+  cd 工具目录 && zip -qr -D -X ../tool.zip . -x '.*'
+  python3 scripts/check_xhs_zip.py ../tool.zip
+  ```
+  会检查：根目录 `index.html`、允许的文件类型、包大小、禁用写法、ES2017 / Chrome 61 兼容。有 ✗ 必须修，有 ! 看一眼。
+- 小红书创服平台的上传页「第一步：调整为符合小红书规范的代码格式」会给一段**改写口令**（一段给 AI 的提示词），用它能加载当前版本的官方打包校验 skill（`minitool-zip-builder`，含 `audit_artifact.py` / `audit_artifact.mjs`）。
+  - 用户已经给了口令或官方 skill：照着加载，打包后再跑一遍官方校验。
+  - **没给就不要停下来等**，也不要反复向用户索要：用自检脚本完成制作和交付，在交付清单的「真机待验项」里写一句"上传前，在创服平台上传页复制第一步的改写口令，让 AI 用官方校验再跑一遍"。
 
 ## 形态
 - 产物是离线 H5 的 zip 包，`index.html` 必须在 zip 根目录。**不要**做成 `.xhsml` 小程序。
 - 允许的文件类型：html、css、js、json、png、jpg、jpeg、gif、webp、svg、woff、woff2。**不要放 README**，否则上传报错。
 - 打包：`cd dir && zip -qr -D -X ../x.zip . -x '*.DS_Store'`。`-D` 表示不写入目录条目。
-- 打完包跑官方的 `audit_artifact.mjs` 和 `audit_artifact.py`。
+- 打完包先跑 `scripts/check_xhs_zip.py`；有官方校验 skill 时再跑官方的 `audit_artifact.py` / `audit_artifact.mjs`。
 
 ## 禁用写法
 - 内联脚本、HTML 上的 `onclick` 属性、`type="module"`、`eval`、`new Function`。
