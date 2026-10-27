@@ -35,5 +35,5 @@
 - 用户点"做一张"时就开始在后台 `preload()` 模型，选完照片能更快出结果。
 
 ## 测试
-- 无头 Chromium 要加 `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`，WebGL 才能跑起来。
+- 无头 Chromium 要加 `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist`，WebGL 才能跑起来；`harness.js` 里设环境变量 `HARNESS_WEBGL=1` 就会带上。没有 WebGL 的工具别开：它会让普通 2D canvas 慢几十倍。
 - 软件渲染下识别一张照片要二十多秒，期间录屏收不到新帧。录宣传片前先预热模型，用 `mark_offsets` 跳过等待段。手机上实际耗时要在真机确认。

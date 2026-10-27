@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded',function(){
   var iv=setInterval(function(){if(window.Sfx&&Sfx.play){clearInterval(iv);var p=Sfx.play;Sfx.play=function(n){window.__sfx.push([n,Date.now()/1000]);return p.apply(Sfx,arguments)}}},5);
 });`
 
+// 要跑 WebGL（TF.js 等）时设 HARNESS_WEBGL=1，用 swiftshader 软件渲染。
+// 默认不开：swiftshader 会让普通 2D canvas 慢几十倍，录屏会卡成幻灯片。
+const GL_ARGS = process.env.HARNESS_WEBGL === '1' ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : []
+
 function makeApi(page, extra) {
   const W = (ms) => page.waitForTimeout(ms)
   const center = async (sel) => {
@@ -84,8 +88,7 @@ function makeApi(page, extra) {
 
 async function shoot(url, outDir) {
   fs.mkdirSync(outDir, { recursive: true })
-  // swiftshader：让无头浏览器也能跑 WebGL（TF.js 等）
-  const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
+  const b = await chromium.launch({ args: GL_ARGS })
   const page = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 })
   const cdp = await page.context().newCDPSession(page)
   const errs = []
@@ -109,7 +112,7 @@ async function record(url, outDir, scenarioPath) {
   fs.rmSync(fdir, { recursive: true, force: true })
   fs.mkdirSync(fdir)
   // 360×640 × 3 倍 = 1080×1920，清晰度远高于 recordVideo
-  const b = await chromium.launch({ args: ['--force-device-scale-factor=3', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] })
+  const b = await chromium.launch({ args: ['--force-device-scale-factor=3'].concat(GL_ARGS) })
   const ctx = await b.newContext({ viewport: { width: 360, height: 640 } })
   await ctx.addInitScript(xhsMock(9520000) + FINGER)
   const page = await ctx.newPage()
