@@ -32,18 +32,90 @@ M = {m['key']: m['t'] for m in rec['marks']}
 for k, dv in CFG.get('mark_offsets', {}).items():
     M[k] += dv
 
+SR = 44100
+
+
+def load_audio(path, trim=True):
+    """任意格式音频 → 44.1k 单声道 float32；trim=True 时去掉首尾静音（-40dB 以下）"""
+    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', path, '-f', 's16le', '-ac', '1', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
+    v = np.frombuffer(raw, np.int16).astype(np.float32) / 32767
+    if trim and len(v):
+        hop = int(0.01 * SR)
+        n = len(v) // hop
+        rms = np.sqrt(np.mean(v[: n * hop].reshape(n, hop) ** 2, axis=1) + 1e-12) if n else np.array([0.0])
+        on = np.where(rms > 10 ** (-40 / 20))[0]
+        if len(on):
+            a = max(0, on[0] * hop - int(0.03 * SR))
+            b = min(len(v), (on[-1] + 1) * hop + int(0.06 * SR))
+            v = v[a:b]
+    return v
+
+
+# ---------- 口播（可选，逐段）----------
+# 每段可以带一条口播音频：segment 里写 "vo_file"，或在顶层写 "vo_dir"，按 01.wav、02.wav… 对应第 1、2… 段，
+# 结尾卡的口播是 end.wav（或顶层 "end_vo_file"）。"vo" 字段放这句口播的文字，用来出字幕文件。
+# 适配规则：画面迁就声音。某段口播比画面长，就把这段画面放慢拉长（录屏本来就是按段变速的），不去加速人声。
+VO_LEAD = CFG.get('vo_lead', 0.12)   # 每段开头留多久再开口
+VO_TAIL = CFG.get('vo_tail', 0.3)    # 说完留多久再切下一段
+VO_DIR = P(CFG['vo_dir']) if CFG.get('vo_dir') else None
+
+
+def vo_path(seg, i):
+    f = seg.get('vo_file')
+    if f:
+        return P(f)
+    if VO_DIR:
+        for ext in ('wav', 'mp3', 'm4a', 'flac'):
+            q = os.path.join(VO_DIR, '%s.%s' % (i, ext))
+            if os.path.exists(q):
+                return q
+    return None
+
+
+VOS = []
+for i, s in enumerate(CFG['segments']):
+    f = vo_path(s, '%02d' % (i + 1))
+    if f and not os.path.exists(f):
+        sys.exit('找不到口播文件：%s' % f)
+    VOS.append(load_audio(f) if f else None)
+END_VO = None
+_ef = P(CFG['end_vo_file']) if CFG.get('end_vo_file') else vo_path({}, 'end')
+if _ef:
+    END_VO = load_audio(_ef)
+
 # 段落：录屏起止 mark、目标时长、字幕、小标签
 SEG = [(s['from'], s['to'], s['dur'], s['caption'], s.get('tag', '')) for s in CFG['segments']]
 END_DUR = CFG.get('end_dur', 3.2)
+if END_VO is not None:
+    END_DUR = max(END_DUR, 0.45 + len(END_VO) / SR + 0.6)
 pieces = []
+vo_place = []   # (输出时间, 音频, 段号, 文字)
+report = []
 o = 0.0
-for a, b, dur, cap, tag in SEG:
-    pieces.append((o, o + dur, M[a], M[b], cap, tag))
-    o += dur
+for i, (a, b, dur, cap, tag) in enumerate(SEG):
+    v = VOS[i]
+    need = VO_LEAD + len(v) / SR + VO_TAIL if v is not None else 0
+    d = max(dur, need)
+    pieces.append((o, o + d, M[a], M[b], cap, tag))
+    speed = (M[b] - M[a]) / d
+    text = CFG['segments'][i].get('vo', '')
+    if v is not None:
+        vo_place.append((o + VO_LEAD, v, i + 1, text))
+    report.append({'seg': i + 1, 'caption': cap, 'vo': text, 'start': round(o, 2), 'end': round(o + d, 2), 'dur_cfg': dur, 'dur': round(d, 2),
+                   'vo_start': round(o + VO_LEAD, 2) if v is not None else None, 'vo_len': round(len(v) / SR, 2) if v is not None else None, 'speed': round(speed, 2)})
+    o += d
 REC_END = o
 TOTAL = REC_END + END_DUR
-for p in pieces:
-    print('%-26s %.2fx' % (p[4], (p[3] - p[2]) / (p[1] - p[0])))
+if END_VO is not None:
+    vo_place.append((REC_END + 0.45, END_VO, 'end', CFG.get('end_vo', '')))
+print('%-4s %-22s %6s %6s %6s %6s' % ('段', '字幕', '原时长', '实际', '口播', '画面'))
+for r in report:
+    warn = ''
+    if r['vo_len'] is not None and r['dur'] > r['dur_cfg'] + 0.01:
+        warn = '  ← 为口播拉长'
+    if r['speed'] < 0.45:
+        warn += '  ⚠ 画面放慢到 %.2fx，会显得卡，建议缩短这句口播或录长一点' % r['speed']
+    print('%-4s %-22s %6.2f %6.2f %6s %5.2fx%s' % (r['seg'], r['caption'][:11], r['dur_cfg'], r['dur'], '%.2f' % r['vo_len'] if r['vo_len'] else '-', r['speed'], warn))
 
 
 def rec_time(t):
@@ -188,8 +260,7 @@ for fi in range(N):
 ff.stdin.close()
 ff.wait()
 
-# ---------- 音频：配乐 + 交互音效 ----------
-SR = 44100
+# ---------- 音频：配乐 + 交互音效 + 口播 ----------
 L = int(TOTAL * SR) + SR
 mix = np.zeros(L, np.float32)
 tt = np.arange(L) / SR
@@ -241,8 +312,45 @@ fade[: int(0.6 * SR)] = np.linspace(0, 1, int(0.6 * SR))
 fe = int(TOTAL * SR)
 fade[fe - int(1.2 * SR): fe] = np.linspace(1, 0, int(1.2 * SR))
 fade[fe:] = 0
-MUSIC = 0.22 if CFG.get('voice') else 0.55
-mix += pad * fade * MUSIC
+# 人声轨：逐段口播 + 旧的整段口播（voice + voice_offset）
+voice = np.zeros(L, np.float32)
+
+
+def put(track, at, sig, gain=1.0):
+    p = int(at * SR)
+    if p < 0 or p >= L:
+        return
+    e = min(L, p + len(sig))
+    track[p:e] += sig[: e - p] * gain
+
+
+for at, v, _, _ in vo_place:
+    put(voice, at, v)
+if CFG.get('voice'):
+    put(voice, CFG.get('voice_offset', 0.0), load_audio(P(CFG['voice']), trim=False))
+
+# 配乐闪避：有人声时压低，没人声时恢复（起 80ms、落 450ms）
+MUSIC = CFG.get('music_gain', 0.55)
+DUCK = CFG.get('music_duck', 0.16)
+hop = int(0.01 * SR)
+nf = L // hop
+env = np.sqrt(np.mean(voice[: nf * hop].reshape(nf, hop) ** 2, axis=1))
+act = (env > 10 ** (-38 / 20)).astype(np.float32)
+# 句内短停顿不要让配乐忽高忽低：把 0.35 秒内的空隙填上
+gapf = int(0.35 / 0.01)
+idx = np.where(act > 0)[0]
+for k in range(len(idx) - 1):
+    if 1 < idx[k + 1] - idx[k] <= gapf:
+        act[idx[k]: idx[k + 1]] = 1
+g = np.empty(nf, np.float32)
+cur = MUSIC
+for k in range(nf):
+    tgt = DUCK if act[k] else MUSIC
+    rate = 0.12 if tgt < cur else 0.022
+    cur += (tgt - cur) * rate
+    g[k] = cur
+gain = np.interp(np.arange(L), np.arange(nf) * hop + hop / 2, g).astype(np.float32)
+mix += pad * fade * gain
 
 rng = np.random.default_rng(3)
 
@@ -291,11 +399,10 @@ for name, r in rec['sfx']:
     elif name in ('done', 'magic'):
         add(ot, chime(), 0.45)
 add(REC_END + 0.05, chime(), 0.5)
-if CFG.get('voice'):
-    # 口播：任意格式（wav/m4a/mp3）先用 ffmpeg 转成 44.1k 单声道，再从 voice_offset 秒开始混入
-    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', P(CFG['voice']), '-f', 's16le', '-ac', '1', '-ar', str(SR), '-'], capture_output=True, check=True).stdout
-    v = np.frombuffer(raw, np.int16).astype(np.float32) / 32767
-    add(CFG.get('voice_offset', 0.0), v, 1.0)
+# 人声电平统一到峰值 0.8 左右，再混进去
+if np.any(voice):
+    voice *= 0.8 / max(1e-6, float(np.percentile(np.abs(voice[voice != 0]), 99.5)))
+mix += voice
 mix = np.tanh(mix * 1.1) * 0.85
 pcm = (np.clip(mix, -1, 1) * 32767).astype(np.int16)
 with wave.open(D + '_audio.wav', 'wb') as wf:
@@ -303,5 +410,33 @@ with wave.open(D + '_audio.wav', 'wb') as wf:
     wf.setsampwidth(2)
     wf.setframerate(SR)
     wf.writeframes(pcm.tobytes())
-subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', D + '_video.mp4', '-i', D + '_audio.wav', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', OUT], check=True)
-print('done', TOTAL)
+# 响度：两遍 loudnorm，成片 -16 LUFS、真峰值 -1.5 dBTP
+LN = 'loudnorm=I=-16:TP=-1.5:LRA=11'
+m = subprocess.run(['ffmpeg', '-hide_banner', '-i', D + '_audio.wav', '-af', LN + ':print_format=json', '-f', 'null', '-'], capture_output=True, text=True).stderr
+af = LN
+try:
+    j = json.loads(m[m.rindex('{'): m.rindex('}') + 1])
+    af = LN + ':measured_I=%s:measured_TP=%s:measured_LRA=%s:measured_thresh=%s:offset=%s:linear=true' % (j['input_i'], j['input_tp'], j['input_lra'], j['input_thresh'], j['target_offset'])
+except Exception:
+    pass
+subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', D + '_video.mp4', '-i', D + '_audio.wav', '-af', af + ',aresample=44100', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', OUT], check=True)
+
+
+# 口播时间表 + 字幕文件（有口播文字时）
+def ts(x):
+    h, r = divmod(x, 3600)
+    mm, ss = divmod(r, 60)
+    return '%02d:%02d:%06.3f' % (h, mm, ss)
+
+
+if vo_place:
+    base = os.path.splitext(OUT)[0]
+    json.dump({'total': round(TOTAL, 2), 'segments': report, 'end_vo': round(len(END_VO) / SR, 2) if END_VO is not None else None}, open(base + '_vo.json', 'w'), ensure_ascii=False, indent=1)
+    lines = [(at, at + len(v) / SR, txt) for at, v, _, txt in vo_place if txt]
+    if lines:
+        with open(base + '.srt', 'w') as f:
+            for k, (a, b, txt) in enumerate(lines):
+                f.write('%d\n%s --> %s\n%s\n\n' % (k + 1, ts(a).replace('.', ','), ts(b).replace('.', ','), txt))
+    print('口播 %d 句已对齐；时间表 %s_vo.json' % (len(vo_place), os.path.basename(base)))
+    print('提醒：AI 合成的口播，发布时请勾选「含 AI 合成内容」')
+print('done', round(TOTAL, 2))
