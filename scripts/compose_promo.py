@@ -58,6 +58,11 @@ def load_audio(path, trim=True):
 VO_LEAD = CFG.get('vo_lead', 0.12)   # 每段开头留多久再开口
 VO_TAIL = CFG.get('vo_tail', 0.3)    # 说完留多久再切下一段
 VO_DIR = P(CFG['vo_dir']) if CFG.get('vo_dir') else None
+# vo_fit：tight（默认）= 段长跟着口播走，说完就切，句间停顿统一；stretch = 只在口播比目标时长长时才拉长
+VO_FIT = CFG.get('vo_fit', 'tight')
+BPM = CFG.get('bpm', 100)
+BEAT = 60.0 / BPM
+GRID = BEAT / 2
 
 
 def vo_path(seg, i):
@@ -94,8 +99,15 @@ report = []
 o = 0.0
 for i, (a, b, dur, cap, tag) in enumerate(SEG):
     v = VOS[i]
-    need = VO_LEAD + len(v) / SR + VO_TAIL if v is not None else 0
-    d = max(dur, need)
+    if v is not None and VO_FIT == 'tight':
+        # 紧凑：段长 = 开口前 + 口播 + 说完后，再向上取整到半拍，切镜头落在拍子上；句间停顿因此统一在 0.3~0.6 秒
+        d = VO_LEAD + len(v) / SR + VO_TAIL
+        d = max(CFG['segments'][i].get('min_dur', 0.9), d)
+        d = math.ceil(d / GRID - 1e-6) * GRID
+    elif v is not None:
+        d = max(dur, VO_LEAD + len(v) / SR + VO_TAIL)
+    else:
+        d = dur
     pieces.append((o, o + d, M[a], M[b], cap, tag))
     speed = (M[b] - M[a]) / d
     text = CFG['segments'][i].get('vo', '')
@@ -111,8 +123,10 @@ if END_VO is not None:
 print('%-4s %-22s %6s %6s %6s %6s' % ('段', '字幕', '原时长', '实际', '口播', '画面'))
 for r in report:
     warn = ''
-    if r['vo_len'] is not None and r['dur'] > r['dur_cfg'] + 0.01:
-        warn = '  ← 为口播拉长'
+    if r['vo_len'] is not None and abs(r['dur'] - r['dur_cfg']) > 0.01:
+        warn = '  ← 跟着口播%s' % ('拉长' if r['dur'] > r['dur_cfg'] else '缩短')
+    if r['speed'] > 12:
+        warn += '  ⚠ 画面加速到 %.1fx，会跳得厉害，这句口播可以加长一点，或者给这段设 min_dur' % r['speed']
     if r['speed'] < 0.45:
         warn += '  ⚠ 画面放慢到 %.2fx，会显得卡，建议缩短这句口播或录长一点' % r['speed']
     print('%-4s %-22s %6.2f %6.2f %6s %5.2fx%s' % (r['seg'], r['caption'][:11], r['dur_cfg'], r['dur'], '%.2f' % r['vo_len'] if r['vo_len'] else '-', r['speed'], warn))
@@ -270,47 +284,120 @@ def note(f):
     return 440.0 * 2 ** ((f - 69) / 12)
 
 
-chords = [[60, 64, 67, 71], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 67]]
-BAR = 2.0
-pad = np.zeros(L, np.float32)
-for ci in range(int(TOTAL / BAR) + 1):
-    ch = chords[ci % 4]
-    s0 = int(ci * BAR * SR)
-    n = int(BAR * 1.15 * SR)
-    seg = np.arange(n) / SR
-    env = np.minimum(1, seg / 0.35) * np.exp(-seg * 0.6)
-    w = np.zeros(n, np.float32)
-    for m in ch:
-        f = note(m)
-        w += np.sin(2 * np.pi * f * seg) * 0.5 + np.sin(2 * np.pi * f * 2.003 * seg) * 0.12
-    w = w * env / len(ch)
-    e = min(L, s0 + n)
-    pad[s0:e] += w[: e - s0]
-    # 琶音
-    for k in range(8):
-        f = note(ch[k % 4] + 12 + (12 if k in (3, 7) else 0))
-        p0 = s0 + int(k * BAR / 8 * SR)
-        n2 = int(0.5 * SR)
-        sg = np.arange(n2) / SR
-        pl = np.sin(2 * np.pi * f * sg) * np.exp(-sg * 7) * 0.16
-        e2 = min(L, p0 + n2)
-        if p0 < L:
-            pad[p0:e2] += pl[: e2 - p0]
-# 低音
-for ci in range(int(TOTAL / BAR) + 1):
-    f = note(chords[ci % 4][0] - 24)
-    for k in range(4):
-        p0 = int((ci * BAR + k * BAR / 4) * SR)
-        n2 = int(0.45 * SR)
-        sg = np.arange(n2) / SR
-        bs = np.sin(2 * np.pi * f * sg) * np.exp(-sg * 5) * 0.22
-        e2 = min(L, p0 + n2)
-        if p0 < L:
-            pad[p0:e2] += bs[: e2 - p0]
+rng_m = np.random.default_rng(7)
+
+
+def onepole_lp(x, fc):
+    """一阶低通，让合成器声音暖一点"""
+    k = math.exp(-2 * math.pi * fc / SR)
+    y = np.empty_like(x)
+    acc = 0.0
+    # 分块向量化：用 scipy 不方便时的简单写法
+    for i0 in range(0, len(x), 4096):
+        blk = x[i0:i0 + 4096]
+        out = np.empty_like(blk)
+        for j in range(len(blk)):
+            acc = (1 - k) * blk[j] + k * acc
+            out[j] = acc
+        y[i0:i0 + 4096] = out
+    return y
+
+
+def synth_music(total):
+    """lo-fi 轻律动：电钢琴和弦 + 圆润低音 + 很轻的鼓。速度 = bpm，和镜头切点同一个拍子网格"""
+    n = int(total * SR) + SR
+    keys = np.zeros(n, np.float32)
+    bass = np.zeros(n, np.float32)
+    drums = np.zeros(n, np.float32)
+    bar = BEAT * 4
+    prog = [[53, 57, 60, 64], [52, 55, 59, 62], [50, 53, 57, 60], [48, 52, 55, 59]]   # Fmaj7 Em7 Dm7 Cmaj7
+
+    def put(buf, at, sig):
+        p0 = int(at * SR)
+        if p0 >= n:
+            return
+        e = min(n, p0 + len(sig))
+        buf[p0:e] += sig[: e - p0]
+
+    def ep(f, dur):
+        # 电钢琴：正弦 + 一点 FM 的"叮"，慢衰减
+        m = int(dur * SR)
+        t = np.arange(m) / SR
+        mod = np.sin(2 * np.pi * f * 1.0 * t) * 1.2 * np.exp(-t * 6)
+        w = np.sin(2 * np.pi * f * t + mod) * np.exp(-t * 1.6)
+        return (w * np.minimum(1, t / 0.01)).astype(np.float32)
+
+    for bi in range(int(total / bar) + 1):
+        ch = prog[bi % 4]
+        t0 = bi * bar
+        # 和弦：第 1 拍 + 第 3 拍后半拍轻轻再弹一次（切分）
+        for at, vel in [(0, 1.0), (BEAT * 2.5, 0.55)]:
+            for k, m in enumerate(ch):
+                put(keys, t0 + at + k * 0.012, ep(440 * 2 ** ((m - 57) / 12), bar) * 0.16 * vel)
+        # 低音：1、3 拍
+        f = 440 * 2 ** ((ch[0] - 24 - 57) / 12)
+        for at in (0, BEAT * 2):
+            m = int(BEAT * 1.6 * SR)
+            t = np.arange(m) / SR
+            put(bass, t0 + at, (np.sin(2 * np.pi * f * t) * np.exp(-t * 2.2) * np.minimum(1, t / 0.008) * 0.32).astype(np.float32))
+        # 鼓：底鼓 1、3 拍（3 拍后的半拍偶尔加一下），軽拍手 2、4 拍，踩镲八分音符带一点摇摆
+        for at in [0, BEAT * 2] + ([BEAT * 2.5] if bi % 2 else []):
+            m = int(0.28 * SR)
+            t = np.arange(m) / SR
+            fr = 50 + 70 * np.exp(-t * 30)
+            put(drums, t0 + at, (np.sin(2 * np.pi * np.cumsum(fr) / SR) * np.exp(-t * 11) * 0.5).astype(np.float32))
+        for at in (BEAT, BEAT * 3):
+            m = int(0.16 * SR)
+            t = np.arange(m) / SR
+            nz = rng_m.standard_normal(m).astype(np.float32)
+            nz = np.diff(np.concatenate([[0], nz]))
+            put(drums, t0 + at, nz * np.exp(-t * 28) * 0.09)
+        for k in range(8):
+            at = k * BEAT / 2 + (BEAT * 0.08 if k % 2 else 0)
+            m = int(0.05 * SR)
+            t = np.arange(m) / SR
+            nz = rng_m.standard_normal(m).astype(np.float32)
+            nz = np.diff(np.diff(np.concatenate([[0, 0], nz])))
+            put(drums, t0 + at, nz * np.exp(-t * 90) * (0.028 if k % 2 else 0.04))
+    keys = onepole_lp(keys, 2600)
+    out = keys + bass + drums
+    # 第一小节只放和弦，第二小节起鼓进来
+    out[: int(bar * SR)] = (keys + bass)[: int(bar * SR)]
+    return out[:n]
+
+
+def load_bgm(path, total):
+    """外部 BGM：不够长就交叉淡化循环"""
+    b = load_audio(path, trim=False)
+    n = int(total * SR) + SR
+    if len(b) >= n:
+        return b[:n]
+    xf = int(1.0 * SR)
+    out = np.zeros(n, np.float32)
+    pos = 0
+    while pos < n:
+        seg = b.copy()
+        if pos > 0:
+            seg[:xf] *= np.linspace(0, 1, xf)
+            out[pos - xf: pos] *= np.linspace(1, 0, xf)
+            pos -= xf
+        e = min(n, pos + len(seg))
+        out[pos:e] += seg[: e - pos]
+        pos = e
+    return out
+
+
+if CFG.get('bgm'):
+    pad = load_bgm(P(CFG['bgm']), TOTAL)
+    pad *= 0.6 / max(1e-6, float(np.percentile(np.abs(pad), 99.5)))
+else:
+    pad = synth_music(TOTAL)
+    pad *= 0.9 / max(1e-6, float(np.percentile(np.abs(pad), 99.5)))
+pad = np.pad(pad, (0, max(0, L - len(pad))))[:L]
 fade = np.ones(L, np.float32)
 fade[: int(0.6 * SR)] = np.linspace(0, 1, int(0.6 * SR))
 fe = int(TOTAL * SR)
-fade[fe - int(1.2 * SR): fe] = np.linspace(1, 0, int(1.2 * SR))
+fade[fe - int(1.5 * SR): fe] = np.linspace(1, 0, int(1.5 * SR))
 fade[fe:] = 0
 # 人声轨：逐段口播 + 旧的整段口播（voice + voice_offset）
 voice = np.zeros(L, np.float32)
