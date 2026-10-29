@@ -23,12 +23,15 @@ utils/   ← 与平台无关的渲染核心，加上 wxp.js（API 的 Promise �
   - 用户拒绝过授权会失败（errMsg 里含 auth deny），这时弹窗引导去 `wx.openSetting`；
   - 用户自己取消的不要报错。
   - 现成封装见 `scripts/platform-wechat.js`。
-- 分享：
-  - `onShareAppMessage` 返回自定义标题和分享图（先用画布画一张 5:4 的图）；
-  - 分享到朋友圈用 `onShareTimeline`。
+- 分享（微信比小红书强的地方，裂变就靠它）：
+  - 在「刚做好作品」的时刻放一个 `<button open-type="share">`（比如「📮 寄给朋友」），点了直接转发给好友 / 群；
+  - `onShareAppMessage(res)` 里 `res.from === 'button'` 时，用作品画一张 **5:4** 分享卡（作品斜放在桌垫上 + 投影），标题写成「我做了一个 XX 送你」；
+  - 卡片要现场画时，返回 `{ title, path, imageUrl: 原图, promise }`，promise 在 3 秒内 resolve 成带卡片的对象，超时自动用原图；
+  - 每个页面都加 `onShareTimeline`，右上角可以分享到朋友圈；
+  - `button` 在 style v2 下默认宽 184px、带边框：要写 `width: auto !important` 和 `button::after { border: none }`。
 - 存储：小数据用 `wx.setStorageSync`；作品图片用 `wx.getFileSystemManager().saveFile` 存到 `wx.env.USER_DATA_PATH`。
 - 传感器：`wx.startGyroscope({interval:'ui'})` + `wx.onGyroscopeChange`；振动用 `wx.vibrateShort({type:'light'})`。
-- 音效：小程序里没有 WebAudio 合成。用 `wx.createInnerAudioContext` 播放预先生成的短音频（可以用 Python 合成 wav，再转成 mp3），或者干脆只用振动。
+- 音效：小程序里没有 WebAudio 合成。用 Python 合成 wav、ffmpeg 转成 2KB 左右的 mp3 放进 `assets/`，`wx.createInnerAudioContext` 播放，`obeyMuteSwitch = true`（手机静音时不响）。每种音效复用一个实例，播放前 `stop()` + `seek(0)`。
 
 ## 上线提醒（交付时告诉用户）
 - 选对服务类目；涉及用户上传图片的，可能需要内容安全相关的说明。

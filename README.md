@@ -40,17 +40,17 @@
 | ![](assets/showcase-pumpkin.jpg) | ![](assets/showcase-lenticular-card.jpg) | ![](assets/showcase-wardrobe-museum.jpg) |
 | 手指刻南瓜，点上蜡烛就亮 | 几张照片压成光栅卡：左右歪换图，上下歪虚焦 | 用虚拟衣服摆出世界名画 |
 
-| 邮票压花器 |
-|---|
-| ![](assets/showcase-stamp-punch.jpg) |
-| 照片一按，压成一张带齿孔的邮票 |
+| 下班飙一把 | OC表情制作器 | 邮票压花器 |
+|---|---|---|
+| ![](assets/showcase-xiaban.jpg) | ![](assets/showcase-ocmoji.jpg) | ![](assets/showcase-stamp-punch.jpg) |
+| 合成波高速公路，擦边加分、氮气起飞，开火箭轮椅飙回家 | 放一张 OC 立绘，做成会动的表情包 | 照片一按，压成带齿孔的邮票（另有微信小程序版，能「寄给朋友」） |
 
 ## 产出
 1. **小工具**：支持三个平台：
    - 小红书小工具：H5 离线 zip，默认平台；
    - 微信小程序；
    - Web 单页。
-2. **宣传片**：1080×1920，带字幕、配乐和交互音效；有口播录音时自动对齐。
+2. **宣传片**：1080×1920，带字幕、配乐和交互音效；有口播时一句一个文件，画面跟着口播走，配乐自动压低，成片统一到 -16 LUFS。
 3. **图标**（1:1）、**上架封面**（3:4）和**发布文案**（3 个标题备选、正文、话题）；需要时再出笔记图。
 
 ## 流程：观 → 定 → 画 → 化 → 验 → 传
@@ -73,6 +73,7 @@ references/
   web.md                 Web 单页
   promo.md               宣传片、图标、上架封面、发布文案
   ai-on-device.md        纯前端 AI 抠图（TF.js，不联网）
+  game.md                游戏类：伪 3D 赛道、爽点奖励、车库解锁、录宣传片
   pitfalls.md            踩过的坑
 scripts/
   platform-xhs.js        小红书平台适配层（存相册、发笔记、存储、陀螺仪、振动、关注作者）
@@ -81,7 +82,8 @@ scripts/
   gif.js                 纯 JS GIF 编码器
   harness.js             自测截图 / CDP 高清录屏
   scenario.example.js    录屏脚本示例
-  compose_promo.py       宣传片合成（字幕、配乐、音效、口播、结尾卡）
+  compose_promo.py       宣传片合成（字幕、配乐 / 外部 BGM、音效、逐段口播对齐、响度标准化、结尾卡）
+  inline_html.py         把工具打成一个自包含 HTML，发成网页给用户手机试玩
   check_xhs_zip.py       小红书小工具 zip 自检（文件类型、大小、禁用写法、兼容性）
   immersive.css / .js    沉浸式布局组件：全屏舞台、主按钮、浮动小圆钮、底部抽屉
   promo.example.json     宣传片配置示例
@@ -114,6 +116,7 @@ scripts/
 ## 边界
 - 不做硬件、后端、账号、付费。
 - 不把源视频的画面、人声、商标用进产品；不克隆任何人的声音，用户本人授权的音色除外。
+- 不把第三方图库的图打包进工具：「免费可商用」通常也禁止再分发。
 
 ## 版本
 见 [CHANGELOG.md](CHANGELOG.md)。

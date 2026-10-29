@@ -50,6 +50,13 @@
 | 陀螺仪 | `startGyroscope({interval:'ui'})` + `onGyroscopeChange` | 9.50+ | 返回角速度 `{x,y,z}`，单位 rad/s，要自己积分并缓慢回中；不支持时报错 10002；**必须留手指拖动兜底** |
 | 关注作者 | `getFollowStatus` / `followAuthor` | 9.51+ | 只能关注本工具作者；`follow_status` 取值：0 未关注，1 已关注，2 是作者本人，-1 失败；每人每天最多弹 10 次确认框（错误码 15404）；用户取消是 20002 |
 | 评论区 | `interactionOpenApi({payload:{action:'post_comment',...}})` | 9.49+ | 只支持图片 |
+| 定位 | `getLocation` | 9.49+ | 取一次位置。适合「盖本地邮戳」「城市限定皮肤」这类玩法 |
+| 长振动 | `vibrateLong` | 9.50+ | 撞车、开奖这类大事件 |
+| AI 文本生成 | `xhs.AI.createModel(...).generateText(...)` | 内测 | **要申请 appId 白名单**；非流式；模型 `deepseek-v4-flash`、`dots-3-note-prev`。可用来写笔记文案、给作品起名、做趣味解读。没开通时整块功能隐藏 |
+
+文件系统完整的接口：`saveFile` / `writeFile` / `appendFile` / `readFile` / `readDir` / `statFile` / `unlink` / `mkdir` / `getFileStorageInfo`；存储另有 `getStorageInfo` / `removeStorage` / `clearStorage`。
+
+**明确没有的**（文档原话：未列出的能力不受支持）：联网（`fetch` / XHR 全禁，媒体只收 `data:` 或本地路径）、用户昵称头像等用户信息、主动转发、数据统计、支付。
 
 现成封装见 `scripts/platform-xhs.js`：所有能力都返回 `'ok'`、`'fail'` 或 `'unsupported'`，并按版本自动降级。
 

@@ -21,7 +21,10 @@ window.__calls=[];window.__sfx=[];
     postNote:ok('postNote'),
     getFollowStatus:function(){return Promise.resolve({follow_status:window.__fs||0})},
     followAuthor:function(){rec('followAuthor');window.__fs=1;return Promise.resolve({follow_status:1})},
-    vibrateShort:ok('vibrateShort')
+    vibrateShort:ok('vibrateShort'),
+    vibrateLong:ok('vibrateLong'),
+    // 窗口信息：顶部安全区 + 右上角三个原生按钮（返回 / 我 / 转发）的位置
+    getWindowInfo:function(){var w=window.innerWidth,h=window.innerHeight;return Promise.resolve({windowWidth:w,windowHeight:h,safeArea:{top:44,bottom:h-20,left:0,right:w},menuButtons:{back:{left:8,top:48,right:40,bottom:80,width:32,height:32},share:{left:w-90,top:48,right:w-50,bottom:80,width:40,height:32},me:{left:w-44,top:48,right:w-8,bottom:80,width:36,height:32}}})}
   }};
 })();`
 }
