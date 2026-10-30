@@ -3,7 +3,7 @@ name: maliang
 description: 马良 skill：发一段或几段短视频（带货、广告、生活片段都行），一键生成一个能用的小产品——小红书小工具（默认）、微信小程序或网站，再附一条宣传片、图标、上架封面和发布文案。用户发来短视频想做成小工具 / 小程序 / 网站，或者想按某个主题（节日、热点）做个小工具时使用。
 ---
 
-# 马良 skill 1.4.0 · 短视频 → 小程序 / 小工具 / 网站 + 一条宣传片
+# 马良 skill 1.4.1 · 短视频 → 小程序 / 小工具 / 网站 + 一条宣传片
 
 神笔马良，画什么就成什么。用户给几段视频，马良交回两样东西：
 
@@ -84,7 +84,7 @@ description: 马良 skill：发一段或几段短视频（带货、广告、生�
 3. **宣传片**：
    1. 写录屏脚本：每个镜头打一个 mark；
    2. 录屏：`node scripts/harness.js record <url> <outDir> scenario.js`；
-   3. 合成：`python3 scripts/compose_promo.py promo.json`，每段配字幕和小标签；
+   3. 合成：**没有口播时默认用 short-ppt 版**——`node scripts/shortppt_cut.mjs shortppt.json` 按约 3 秒一个节点重剪、配律动 BGM，再用 [short-ppt](https://github.com/mingjuntx/short-ppt) 的 `render.py` 加顶部关键词节点、底部字幕和粗宋体 3:4 封面（见 promo.md 3b）；有口播时用 `python3 scripts/compose_promo.py promo.json`，每段配字幕和小标签；
    4. 声音：自动合成配乐，按打点叠加交互音效；有口播时一句一个文件放进 `vo_dir`，画面跟着口播的长度走、配乐自动压低，见 promo.md；
    5. 自查：抽帧拼图看一遍，确认没有空白帧、字幕没被遮挡。
 4. **发布文案**：3 个标题备选（≤20 字）、正文、话题标签。用户要笔记图时再做 4–6 张 1080×1440。

@@ -60,6 +60,35 @@ python3 scripts/compose_promo.py promo.json
 - 有人声时配乐自动压低约 10 dB（`music_gain` 0.55 → `music_duck` 0.16），句内短停顿不回弹；
 - 品牌词和工具名读音正确：抽听每段开头。
 
+## 3b. short-ppt 版（无口播时默认）
+像做 PPT 一样把录屏讲清楚：左上角一个接一个的关键词节点，底部短字幕，粗宋体 3:4 封面。排版交给 [short-ppt skill](https://github.com/mingjuntx/short-ppt)，马良负责剪节奏和配乐。2026-10-30 打冰激凌模拟器上用户认可这一版（「目前可以」）。有口播的宣传片仍走上面的 `compose_promo.py`。
+
+**节奏：约 3 秒一个节点**
+- 一个节点 = 一个动作或卖点，输出时长 2.4～3.5 秒；30 秒左右的片子 10～11 个节点。第一版按 6～20 秒一个节点做，用户嫌「节奏有点长」。
+- 长动作（往上叠、拖着走）按 1.3～1.8 倍加速剪进一个节点，不要拖成两三个节点；节点之间硬切。
+- 节点标题 3～6 字（「越高越抖」「收尖量高度」），副标题 ≤10 字补一句细节（「量出 19.7cm」）。
+- 底部字幕是口语短句，≤14 字一行；**抽屉、弹窗、卡片打开的节点不出字幕**（字幕会压在抽屉内容上，节点标题已经讲清楚了）。字幕结束时间要卡在抽屉弹出之前，抽帧确认。
+
+**配乐：要有律动，不要单调铺底**
+- 第一版只有一个大三和弦长铺 + 音效，用户说「bgm 有点单调」。改成 116 BPM 的律动：底鼓、军鼓、踩镲、贝斯、反拍和弦，和弦走 C–G–Am–F，每两小节一句旋律；第一小节只放踩镲和和弦当前奏，结尾停在主和弦长音上。
+- 「塌了 / 翻车 / 失败」这种瞬间用 `drop_at` 让鼓和贝斯停一拍再进，比一直铺着更有戏。
+- 交互音效按录屏打点叠上去，加速段同一种音效间隔不小于 0.22 秒，否则太密。
+- 自动口播 + 更好的配乐由另一条线在做，做好后接到这里。
+
+**做法**
+1. 录屏同第 2 节（`harness.js record`），mark 打在每个动作开头。
+2. 写 `shortppt.json`（参考 `scripts/shortppt.example.json`），每段写 `from` / `to`（秒数、mark 名或「mark±秒」）、`speed`、`title`、`sub`、`cap`（抽屉段写 `null`）。
+3. `node scripts/shortppt_cut.mjs shortppt.json`：按节点重剪、合成配乐和音效，输出 `source.mp4`（默认放大到 1080 宽，录屏帧常常只有 390 宽）、`captions.srt`、`chapters.json`。打印的节点时长不在 2～4 秒会报警。需要 ffmpeg：环境变量 `FFMPEG_BINARY`，或 PATH 里的 ffmpeg（short-ppt 装好后自带一个 imageio-ffmpeg）。
+4. 按 short-ppt 的 README 装好依赖、跑 `configure_fonts.py`，然后：
+   ```
+   python scripts/chapters.py --plan chapters.json --duration <秒数>
+   python scripts/render.py --input source.mp4 --output-dir final --title "第一行\n第二行" --srt captions.srt --chapters chapters.json --style style.json
+   ```
+   `style.json` 从 short-ppt 默认导出的那份改一处：`"subtitle_bottom": 0.19`（默认 0.24 的字幕正好压在录屏里的手指光标上）。
+5. **封面单独做**：默认按 `--cover-time` 居中裁 3:4，竖长录屏会把主体顶部切掉（冰激凌尖没了）。改成截录屏上半屏（带上分数 / 高度这类读数），两侧用同一帧放大模糊补成 3:4，存成 PNG 后 `render.py --input cover-src.png --cover-only`。
+6. 自查：每个节点中间抽一帧拼图，看节点标题、字幕、手指光标、抽屉有没有互相压住；再抽抽屉弹出前后的帧，确认字幕已经消失。
+7. 发小红书前不用 remux：ffmpeg 出的是普通 MP4。
+
 ## 4. 镜头建议（光栅小卡机，29 秒）
 | 镜头 | 时长 | 字幕 |
 |---|---|---|

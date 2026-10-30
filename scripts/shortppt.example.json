@@ -1,0 +1,20 @@
+{
+  "rec": "rec",
+  "out": "shortppt",
+  "bpm": 116,
+  "width": 1080,
+  "drop_at": "fall",
+  "segments": [
+    { "from": "start", "to": 3.6, "speed": 1.0, "title": "按住出奶", "sub": "冰激凌机开工", "cap": "按住屏幕就出奶" },
+    { "from": 3.6, "to": "tall-0.1", "speed": 1.6, "title": "一圈圈叠高", "sub": "越叠越上头", "cap": "一圈一圈往上叠" },
+    { "from": 8.5, "to": 12.5, "speed": 1.3, "title": "越高越抖", "sub": "左右拖着接稳", "cap": "手抖了，拖着蛋筒去接" },
+    { "from": 12.5, "to": 17.0, "speed": 1.5, "title": "快要塌了", "sub": "红条满了就歪", "cap": "红条快满，稳住" },
+    { "from": 17.1, "to": 19.5, "speed": 1.0, "title": "收尖量高度", "sub": "量出 19.7cm", "cap": "收尖！19.7cm" },
+    { "from": 19.5, "to": 22.6, "speed": 1.1, "title": "发称号", "sub": "叠叠高大师", "cap": null },
+    { "from": 23.2, "to": "pumpkin", "speed": 1.0, "title": "换口味", "sub": "六种随便挑", "cap": null },
+    { "from": "pumpkin", "to": 31.2, "speed": 1.8, "title": "万圣南瓜", "sub": "限定口味接着叠", "cap": "南瓜味接着叠" },
+    { "from": 31.2, "to": 34.6, "speed": 1.0, "title": "歪了就塌", "sub": "手一抖就塌了", "cap": "完了完了，塌了" },
+    { "from": 34.6, "to": "book-0.16", "speed": 1.2, "title": "塌了也能晒", "sub": "存成卡片", "cap": null },
+    { "from": "book-0.16", "to": "end-0.06", "speed": 1.0, "title": "冰柜收藏", "sub": "做过的都在这", "cap": null }
+  ]
+}

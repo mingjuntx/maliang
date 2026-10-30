@@ -83,10 +83,12 @@ scripts/
   harness.js             自测截图 / CDP 高清录屏
   scenario.example.js    录屏脚本示例
   compose_promo.py       宣传片合成（字幕、配乐 / 外部 BGM、音效、逐段口播对齐、响度标准化、结尾卡）
+  shortppt_cut.mjs       宣传片 short-ppt 版：约 3 秒一个节点重剪 + 律动 BGM，输出给 short-ppt 排版
   inline_html.py         把工具打成一个自包含 HTML，发成网页给用户手机试玩
   check_xhs_zip.py       小红书小工具 zip 自检（文件类型、大小、禁用写法、兼容性）
   immersive.css / .js    沉浸式布局组件：全屏舞台、主按钮、浮动小圆钮、底部抽屉
   promo.example.json     宣传片配置示例
+  shortppt.example.json  short-ppt 版配置示例
 ```
 
 ## 安装
@@ -100,6 +102,7 @@ scripts/
 **依赖**
 - 自测和录屏：Node.js、Playwright（Chromium）。
 - 宣传片：Python 3、numpy、Pillow、ffmpeg，以及中文字体（默认 Noto Sans CJK）。
+- 宣传片 short-ppt 版：Node.js、ffmpeg，以及 [short-ppt](https://github.com/mingjuntx/short-ppt)（Python 3.11+、Pillow、jieba、Noto Serif SC / Noto Sans SC）。
 - 小红书小工具的打包自检用自带的 `scripts/check_xhs_zip.py`，不需要额外安装。上传前建议再用官方校验跑一遍：在创服平台上传页复制「第一步」的改写口令发给 AI 即可（可选）。
 
 ## 用法
